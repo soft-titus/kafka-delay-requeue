@@ -111,6 +111,18 @@ func main() {
 			continue
 		}
 
+		log.Infof("Received message: %s", string(msg.Value))
+
+		// Quick heartbeat check
+		var raw map[string]interface{}
+		if err := json.Unmarshal(msg.Value, &raw); err == nil {
+			if msgType, ok := raw["type"].(string); ok && msgType == "heartbeat" {
+				log.Infof("Heartbeat message received, skipping processing for partition %d offset %d", msg.Partition, msg.Offset)
+				commitMessage(ctx, r, msg)
+				continue
+			}
+		}
+
 		originTopic, retryCount, processAfter, err := extractHeaders(msg.Headers)
 		if err != nil {
 			pushToDLQ(ctx, msg, wDLQ, r, err.Error())
